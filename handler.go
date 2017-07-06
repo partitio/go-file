@@ -82,25 +82,5 @@ func (h *handler) ReadAt(ctx context.Context, req *proto.ReadRequest, rsp *proto
 }
 
 func (h *handler) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.ReadResponse) error {
-	file := h.session.Get(req.Id)
-	if file == nil {
-		return errors.InternalServerError("go.micro.srv.file", "You must call open first.")
-	}
-
-	rsp.Data = make([]byte, req.Size)
-	n, err := file.Read(rsp.Data)
-	if err != nil && err != io.EOF {
-		return errors.InternalServerError("go.micro.srv.file", err.Error())
-	}
-
-	if err == io.EOF {
-		rsp.Eof = true
-	}
-
-	rsp.Size = int64(n)
-	rsp.Data = rsp.Data[:rsp.Size]
-
-	log.Printf("Read sessionId=%d, read=%d[bytes]", req.Id, rsp.Size)
-
-	return nil
+	return h.ReadAt(ctx, req, rsp)
 }
