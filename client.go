@@ -17,7 +17,7 @@ const (
 )
 
 type fc struct {
-	c proto.FileClient
+	c proto.FileService
 }
 
 func (c *fc) Open(filename string) (int64, error) {

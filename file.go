@@ -22,7 +22,7 @@ type Client interface {
 
 // NewClient returns a new Client which uses a micro Client
 func NewClient(service string, c client.Client) Client {
-	return &fc{proto.NewFileClient(service, c)}
+	return &fc{proto.FileServiceClient(service, c)}
 }
 
 // NewHandler is a handler that can be registered with a micro Server
