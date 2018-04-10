@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	proto "github.com/micro/go-file/proto"
+	proto "github.com/asim/go-file/proto"
 	"github.com/micro/go-micro/errors"
 	"golang.org/x/net/context"
 )

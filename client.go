@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	proto "github.com/micro/go-file/proto"
+	proto "github.com/asim/go-file/proto"
 
 	"golang.org/x/net/context"
 )

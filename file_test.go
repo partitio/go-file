@@ -10,7 +10,7 @@ import (
 	b "github.com/micro/go-micro/broker/mock"
 	r "github.com/micro/go-micro/registry/mock"
 
-	proto "github.com/micro/go-file/proto"
+	proto "github.com/asim/go-file/proto"
 	"golang.org/x/net/context"
 )
 
