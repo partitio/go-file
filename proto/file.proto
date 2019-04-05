@@ -5,6 +5,9 @@ service File {
 	rpc Stat(StatRequest) returns(StatResponse) {};
 	rpc Read(ReadRequest) returns(ReadResponse) {};
 	rpc Close(CloseRequest) returns(CloseResponse) {};
+
+	rpc Create(CreateRequest) returns(CreateResponse) {};
+	rpc Write(WriteRequest) returns(WriteResponse) {};
 }
 
 message OpenRequest {
@@ -37,7 +40,25 @@ message ReadRequest {
 	int64 id = 1;
 	int64 offset = 2;
 	int64 size = 3;
+}
 
+message CreateRequest {
+	string filename = 1;
+}
+
+message CreateResponse {
+	int64 id = 1;
+	bool result = 2;
+}
+
+message WriteRequest {
+	int64 id = 1;
+	int64 offset = 2;
+	bytes data = 4;
+}
+
+message WriteResponse {
+	int64 size = 1;
 }
 
 message ReadResponse {

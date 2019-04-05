@@ -1,25 +1,27 @@
-package file
+package main
 
 import (
+	"context"
 	"github.com/partitio/go-file/client"
 	"github.com/partitio/go-file/handler"
+	"github.com/partitio/go-file/http_handler"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
-	"testing"
 
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry/memory"
-	"golang.org/x/net/context"
 
 	proto "github.com/partitio/go-file/proto"
 )
 
-func TestFileServer(t *testing.T) {
+func main() {
 	// service cancellation context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
+	srv := &http.Server{}
 	// wait chan
 	wait := make(chan bool)
 	r := memory.NewRegistry()
@@ -32,6 +34,10 @@ func TestFileServer(t *testing.T) {
 			close(wait)
 			return nil
 		}),
+		micro.AfterStop(func() error {
+			srv.Shutdown(ctx)
+			return nil
+		}),
 	)
 
 	td := os.TempDir()
@@ -40,7 +46,7 @@ func TestFileServer(t *testing.T) {
 	// write a file
 	err := ioutil.WriteFile(f, []byte(`hello world`), 0666)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 	defer os.Remove(f)
 
@@ -54,30 +60,13 @@ func TestFileServer(t *testing.T) {
 	<-wait
 
 	// new file client
-	cl := client.NewClient("go.micro.srv.file", s.Client())
+	c := client.NewClient("go.micro.srv.file", s.Client())
+	h := http_handler.NewFileHandler(c)
+	m := http.NewServeMux()
+	m.Handle("/uploads", h)
+	m.Handle("/uploads/", h)
+	srv.Handler = m
+	srv.Addr = ":8080"
 
-	if err := cl.Upload(f, "server_test.file"); err != nil {
-		t.Error(err)
-		return
-	}
-	defer os.Remove("server_test.file")
-
-	if err := cl.Download("server_test.file", "client_test.file"); err != nil {
-		// no fatal as we need cleanup
-		t.Error(err)
-		return
-	}
-	defer os.Remove("client_test.file")
-
-	// got file!
-	b, err := ioutil.ReadFile("client_test.file")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if string(b) != "hello world" {
-		t.Errorf("got %s, expected 'hello world'", string(b))
-		return
-	}
+	srv.ListenAndServe()
 }
