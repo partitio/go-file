@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/partitio/go-file"
-	"github.com/partitio/go-file/client"
-	"github.com/partitio/go-file/http_handler"
 )
 
 func main() {
@@ -51,8 +49,7 @@ func main() {
 
 			// new file client
 			mc := mclient.NewClient(mclient.Registry(r), mclient.RequestTimeout(24 * time.Hour))
-			c := client.NewClient("go.micro.srv.file", mc)
-			wh := http_handler.NewFileHandler(c)
+			wh := file.NewHttpHandler("go.micro.srv.file", mc)
 			w := web.NewService(web.Address(":18888"), web.Context(ctx))
 			w.Handle("/uploads", wh)
 			w.Handle("/uploads/", wh)
