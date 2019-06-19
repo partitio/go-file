@@ -1,6 +1,7 @@
 package http_handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -57,6 +58,7 @@ func (f *fileHandler) Download(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	logrus.Info("Received upload request")
 	// Parse our multipart form, 10 << 20 specifies a maximum
 	// upload of 10 MB files.
@@ -108,7 +110,8 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// return that we have successfully uploaded our file!
-	fmt.Fprintf(w, "Successfully Uploaded File\n")
+	res, _ := json.Marshal(map[string]string{"response": "Successfully Uploaded File"})
+	w.Write(res)
 }
 
 func NewFileHandler(client client.FileClient) http.Handler {

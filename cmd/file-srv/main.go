@@ -10,10 +10,9 @@ import (
 	"github.com/micro/go-micro/web"
 	"github.com/spf13/cobra"
 
+	"github.com/partitio/go-file"
 	"github.com/partitio/go-file/client"
-	"github.com/partitio/go-file/handler"
 	"github.com/partitio/go-file/http_handler"
-	proto "github.com/partitio/go-file/proto"
 )
 
 func main() {
@@ -39,12 +38,8 @@ func main() {
 				}),
 			)
 
-			h, err := handler.NewHandler(args[0])
-			if err != nil {
-				return err
-			}
 			// register file handler
-			if err := proto.RegisterFileHandler(s.Server(), h); err != nil {
+			if err := file.RegisterFileHandler(s.Server(), args[0]); err != nil {
 				return err
 			}
 
