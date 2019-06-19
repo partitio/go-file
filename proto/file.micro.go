@@ -51,7 +51,7 @@ var _ context.Context
 var _ client.Option
 var _ server.Option
 
-// Client API for File service
+// FileClient API for File service
 
 type FileService interface {
 	Open(ctx context.Context, in *OpenRequest, opts ...client.CallOption) (*OpenResponse, error)

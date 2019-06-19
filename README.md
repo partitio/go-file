@@ -1,7 +1,7 @@
 # Go File [![License](https://img.shields.io/:license-apache-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![GoDoc](https://godoc.org/github.com/micro/go-file?status.svg)](https://godoc.org/github.com/micro/go-file)
 
 Go File is a file server library leveraging go-micro. It enables you to serve and consume files via RPC.
-
+It also provide an http handler that can be used in an api-gateway.
 This is a stripped down version of [gotransfer](https://github.com/yanolab/gotransfer).
 
 ## Usage
@@ -10,13 +10,13 @@ This is a stripped down version of [gotransfer](https://github.com/yanolab/gotra
 ### Server
 
 ```go
-import "github.com/micro/go-file"
+import "github.com/partitio/go-file"
 
 service := micro.NewService(
 	micro.Name("go.micro.srv.file"),
 )
 
-proto.RegisterFileHandler(service.Server(), file.NewHandler("/tmp"))
+file.RegisterFileHandler(service.Server(), "/tmp")
 
 service.Init()
 service.Run()
@@ -34,6 +34,9 @@ service.Init()
 client := file.NewClient("go.micro.srv.file", service.Client())
 client.Download("remote.file", "local.file")
 ```
+
+### HTTP Server Handler
+See [the example program](cmd/file-srv/main.go)
 
 ## Hand Wavy Bench
 

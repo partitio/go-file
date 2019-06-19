@@ -1,5 +1,7 @@
 vendor
 .idea
+testfiles
+file-srv
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Go template

@@ -1,8 +1,6 @@
 package file
 
 import (
-	"github.com/partitio/go-file/client"
-	"github.com/partitio/go-file/handler"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,6 +10,8 @@ import (
 	"github.com/micro/go-micro/registry/memory"
 	"golang.org/x/net/context"
 
+	"github.com/partitio/go-file/client"
+	"github.com/partitio/go-file/handler"
 	proto "github.com/partitio/go-file/proto"
 )
 
@@ -44,8 +44,14 @@ func TestFileServer(t *testing.T) {
 	}
 	defer os.Remove(f)
 
+	h, err := handler.NewHandler(td)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// register file handler
-	proto.RegisterFileHandler(s.Server(), handler.NewHandler(td))
+	if err := proto.RegisterFileHandler(s.Server(), h); err != nil {
+		t.Fatal(err)
+	}
 
 	// start service
 	go s.Run()
