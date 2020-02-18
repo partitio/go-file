@@ -1,13 +1,12 @@
 package file
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry/memory"
+	"github.com/spf13/afero"
 	"golang.org/x/net/context"
 
 	"github.com/partitio/go-file/client"
@@ -33,18 +32,20 @@ func TestFileServer(t *testing.T) {
 			return nil
 		}),
 	)
-
-	td := os.TempDir()
-	f := filepath.Join(td, "/test.file")
-
-	// write a file
-	err := ioutil.WriteFile(f, []byte(`hello world`), 0666)
+	fs := afero.NewMemMapFs()
+	td , err := afero.TempDir(fs,"", "" )
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f)
+	f := filepath.Join(td, "/test.file")
 
-	h, err := handler.NewHandler(td)
+	// write a file
+	err = afero.WriteFile(fs, f, []byte(`hello world`), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fs.Remove(f)
+	h, err := handler.NewHandler(td, fs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,23 +61,23 @@ func TestFileServer(t *testing.T) {
 	<-wait
 
 	// new file client
-	cl := client.NewClient("go.micro.srv.file", s.Client())
+	cl := client.NewClient("go.micro.srv.file", s.Client(), fs)
 
 	if err := cl.Upload(f, "server_test.file"); err != nil {
 		t.Error(err)
 		return
 	}
-	defer os.Remove("server_test.file")
+	defer fs.Remove("server_test.file")
 
 	if err := cl.Download("server_test.file", "client_test.file"); err != nil {
 		// no fatal as we need cleanup
 		t.Error(err)
 		return
 	}
-	defer os.Remove("client_test.file")
+	defer fs.Remove("client_test.file")
 
 	// got file!
-	b, err := ioutil.ReadFile("client_test.file")
+	b, err := afero.ReadFile(fs, "client_test.file")
 	if err != nil {
 		t.Error(err)
 		return
