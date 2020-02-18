@@ -30,9 +30,9 @@ import fmt "fmt"
 import math "math"
 
 import (
+	context "context"
 	client "github.com/micro/go-micro/client"
 	server "github.com/micro/go-micro/server"
-	context "context"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -51,7 +51,7 @@ var _ context.Context
 var _ client.Option
 var _ server.Option
 
-// FileClient API for File service
+// Client API for File service
 
 type FileService interface {
 	Open(ctx context.Context, in *OpenRequest, opts ...client.CallOption) (*OpenResponse, error)
