@@ -68,8 +68,8 @@ func main() {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&fsName,fsFlagName, " os", "Filesystem that should be used by the handler (os/memory/cache)")
-	cmd.Flags().DurationVar(&cacheDuration, "cache", 5, "Duration of cache used if cache is selected as filesystem")
+	cmd.Flags().StringVar(&fsName,fsFlagName, "os", "Filesystem that should be used by the handler (os/memory/cache)")
+	cmd.Flags().DurationVar(&cacheDuration, "cache", 5 * time.Second, "Duration of cache used if cache is selected as filesystem")
 	cmd.Execute()
 }
 

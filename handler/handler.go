@@ -24,7 +24,7 @@ func NewHandler(dir string, fs afero.Fs) (proto.FileHandler, error) {
 	}
 	return &handler{
 		dir: dir,
-		os: fs,
+		fs:  fs,
 		session: &session{
 			files: make(map[int64]afero.File),
 		},
@@ -43,12 +43,12 @@ func RegisterHandler(s server.Server, dir string, fs afero.Fs) error {
 type handler struct {
 	dir     string
 	session *session
-	os		afero.Fs
+	fs      afero.Fs
 }
 
 func (h *handler) Open(ctx context.Context, req *proto.OpenRequest, rsp *proto.OpenResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	file, err := h.os.Open(path)
+	file, err := h.fs.Open(path)
 	if err != nil {
 		errm := strings.Replace(err.Error(), h.dir, "", -1)
 		return errors.BadRequest("go.micro.srv.file", errm)
@@ -70,7 +70,7 @@ func (h *handler) Close(ctx context.Context, req *proto.CloseRequest, rsp *proto
 
 func (h *handler) Stat(ctx context.Context, req *proto.StatRequest, rsp *proto.StatResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	fi, err := h.os.Stat(path)
+	fi, err := h.fs.Stat(path)
 	if os.IsNotExist(err) {
 		errm := strings.Replace(err.Error(), h.dir, "", -1)
 		return errors.BadRequest("go.micro.srv.file", errm)
@@ -115,7 +115,7 @@ func (h *handler) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.R
 
 func (h *handler) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	file, err := h.os.Create(path)
+	file, err := h.fs.Create(path)
 	if err != nil {
 		return errors.InternalServerError("go.micro.srv.file", err.Error())
 	}
