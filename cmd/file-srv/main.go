@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/micro/go-micro"
@@ -40,10 +39,7 @@ func main() {
 					return nil
 				}),
 			)
-			fs, err := getFileSystem(fsName)
-			if err != nil {
-				return err
-			}
+			fs := getFileSystem(fsName)
 			// register file handler
 			if err := file.RegisterFileHandler(s.Server(), args[0], fs); err != nil {
 				return err
@@ -73,15 +69,13 @@ func main() {
 	cmd.Execute()
 }
 
-func getFileSystem(fs string) (afero.Fs, error) {
+func getFileSystem(fs string) afero.Fs {
 	switch fs {
-	case "memory":
-		return afero.NewMemMapFs(), nil
 	case "cache":
-		return afero.NewCacheOnReadFs(afero.NewOsFs(), afero.NewMemMapFs(), cacheDuration), nil
+		return afero.NewCacheOnReadFs(afero.NewOsFs(), afero.NewMemMapFs(), cacheDuration)
 	case "os":
-		return afero.NewOsFs(), nil
+		return afero.NewOsFs()
 	default:
-		return nil, errors.New("filesystem not found")
+		return afero.NewMemMapFs()
 	}
 }
