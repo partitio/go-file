@@ -10,28 +10,30 @@ import (
 	"github.com/micro/go-micro/errors"
 	"github.com/micro/go-micro/server"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"golang.org/x/net/context"
 
 	proto "github.com/partitio/go-file/proto"
 )
 
 // NewHandler is a handler that can be registered with a micro Server
-func NewHandler(dir string) (proto.FileHandler, error) {
+func NewHandler(dir string, fs afero.Fs) (proto.FileHandler, error) {
 	logrus.Infof("Creating File handler on directory : %s", dir)
-	if i, err := os.Stat(dir); err != nil || !i.IsDir(){
+	if i, err := fs.Stat(dir); err != nil || !i.IsDir(){
 		return nil, fmt.Errorf("%s is not a valid directory", dir)
 	}
 	return &handler{
 		dir: dir,
+		fs:  fs,
 		session: &session{
-			files: make(map[int64]*os.File),
+			files: make(map[int64]afero.File),
 		},
 	}, nil
 }
 
 // RegisterHandler is a convenience method for registering a handler
-func RegisterHandler(s server.Server, dir string) error {
-	h, err := NewHandler(dir)
+func RegisterHandler(s server.Server, dir string, fs afero.Fs) error {
+	h, err := NewHandler(dir, fs)
 	if err != nil {
 		return err
 	}
@@ -41,11 +43,12 @@ func RegisterHandler(s server.Server, dir string) error {
 type handler struct {
 	dir     string
 	session *session
+	fs      afero.Fs
 }
 
 func (h *handler) Open(ctx context.Context, req *proto.OpenRequest, rsp *proto.OpenResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	file, err := os.Open(path)
+	file, err := h.fs.Open(path)
 	if err != nil {
 		errm := strings.Replace(err.Error(), h.dir, "", -1)
 		return errors.BadRequest("go.micro.srv.file", errm)
@@ -67,7 +70,7 @@ func (h *handler) Close(ctx context.Context, req *proto.CloseRequest, rsp *proto
 
 func (h *handler) Stat(ctx context.Context, req *proto.StatRequest, rsp *proto.StatResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	fi, err := os.Stat(path)
+	fi, err := h.fs.Stat(path)
 	if os.IsNotExist(err) {
 		errm := strings.Replace(err.Error(), h.dir, "", -1)
 		return errors.BadRequest("go.micro.srv.file", errm)
@@ -112,7 +115,7 @@ func (h *handler) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.R
 
 func (h *handler) Create(ctx context.Context, req *proto.CreateRequest, rsp *proto.CreateResponse) error {
 	path := filepath.Join(h.dir, req.Filename)
-	file, err := os.Create(path)
+	file, err := h.fs.Create(path)
 	if err != nil {
 		return errors.InternalServerError("go.micro.srv.file", err.Error())
 	}

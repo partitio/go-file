@@ -8,11 +8,15 @@ import (
 	mclient "github.com/micro/go-micro/client"
 	"github.com/micro/go-micro/registry/memory"
 	"github.com/micro/go-micro/web"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/partitio/go-file"
 )
 
+var fsName string
+var cacheDuration time.Duration
+var fsFlagName = "fs"
 func main() {
 	// service cancellation context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -35,9 +39,9 @@ func main() {
 					return nil
 				}),
 			)
-
+			fs := getFileSystem(fsName)
 			// register file handler
-			if err := file.RegisterFileHandler(s.Server(), args[0]); err != nil {
+			if err := file.RegisterFileHandler(s.Server(), args[0], fs); err != nil {
 				return err
 			}
 
@@ -49,7 +53,7 @@ func main() {
 
 			// new file client
 			mc := mclient.NewClient(mclient.Registry(r), mclient.RequestTimeout(24 * time.Hour))
-			wh := file.NewHttpHandler("go.micro.srv.file", mc)
+			wh := file.NewHttpHandler("go.micro.srv.file", mc, fs)
 			w := web.NewService(web.Address(":18888"), web.Context(ctx))
 			w.Handle("/uploads", wh)
 			w.Handle("/uploads/", wh)
@@ -60,5 +64,18 @@ func main() {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&fsName,fsFlagName, "os", "Filesystem that should be used by the handler (os/memory/cache)")
+	cmd.Flags().DurationVar(&cacheDuration, "cache", 5 * time.Second, "Duration of cache used if cache is selected as filesystem")
 	cmd.Execute()
+}
+
+func getFileSystem(fs string) afero.Fs {
+	switch fs {
+	case "cache":
+		return afero.NewCacheOnReadFs(afero.NewOsFs(), afero.NewMemMapFs(), cacheDuration)
+	case "os":
+		return afero.NewOsFs()
+	default:
+		return afero.NewMemMapFs()
+	}
 }

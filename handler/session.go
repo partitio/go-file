@@ -1,17 +1,18 @@
 package handler
 
 import (
-	"os"
 	"sync"
+
+	"github.com/spf13/afero"
 )
 
 type session struct {
 	sync.Mutex
-	files   map[int64]*os.File
+	files   map[int64]afero.File
 	counter int64
 }
 
-func (s *session) Add(file *os.File) int64 {
+func (s *session) Add(file afero.File) int64 {
 	s.Lock()
 	defer s.Unlock()
 
@@ -21,7 +22,7 @@ func (s *session) Add(file *os.File) int64 {
 	return s.counter
 }
 
-func (s *session) Get(id int64) *os.File {
+func (s *session) Get(id int64) afero.File {
 	s.Lock()
 	defer s.Unlock()
 	return s.files[id]
