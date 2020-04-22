@@ -46,7 +46,7 @@ const (
 
 type fc struct {
 	c proto.FileService
-	os afero.Fs
+	os *afero.Fs
 }
 
 func (c *fc) Open(filename string) (int64, error) {
@@ -117,10 +117,13 @@ func (c *fc) DownloadAt(filename, saveFile string, blockId int) error {
 	if stat.Size%BlockSize != 0 {
 		blocks += 1
 	}
-
+	if c.os == nil {
+		return errors.New("UploadAt cannot use a nil fs")
+	}
+	fs := *c.os
 	log.Printf("Download %s in %d blocks\n", filename, blocks-blockId)
 
-	file, err := c.os.OpenFile(saveFile, os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := fs.OpenFile(saveFile, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -173,7 +176,11 @@ func (c *fc) Upload(filename, saveFile string) error {
 }
 
 func (c *fc) UploadAt(filename, saveFile string, blockId int) error {
-	stat, err := c.os.Stat(filename)
+	if c.os == nil {
+		return errors.New("UploadAt cannot use a nil fs")
+	}
+	fs := *c.os
+	stat, err := fs.Stat(filename)
 	if err != nil {
 		return err
 	}
@@ -185,7 +192,7 @@ func (c *fc) UploadAt(filename, saveFile string, blockId int) error {
 		return err
 	}
 	defer c.Close(sessionId)
-	f, err := c.os.Open(filename)
+	f, err := fs.Open(filename)
 	if err != nil {
 		return err
 	}
@@ -230,7 +237,7 @@ func (c *fc) WriteAt(sessionId, offset int64, buf []byte) (int, error) {
 }
 
 // NewClient returns a new FileClient which uses a micro FileClient
-func NewClient(service string, c client.Client, fs afero.Fs) FileClient {
+func NewClient(service string, c client.Client, fs *afero.Fs) FileClient {
 	return &fc{proto.NewFileService(service, c), fs}
 }
 
