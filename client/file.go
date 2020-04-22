@@ -51,7 +51,7 @@ func (f *file) Read(p []byte) (n int, err error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
-	b, err := f.c.ReadAt(f.session, f.offset, int64(len(p)))
+	b, err := f.c.WithContext(f.ctx).ReadAt(f.session, f.offset, int64(len(p)))
 	if err != nil {
 		return 0, err
 	}
@@ -66,7 +66,7 @@ func (f *file) Write(p []byte) (n int, err error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
-	b, err := f.c.WriteAt(f.session, f.offset, p)
+	b, err := f.c.WithContext(f.ctx).WriteAt(f.session, f.offset, p)
 	if err != nil {
 		return 0, err
 	}
@@ -164,7 +164,7 @@ func (f *file) Close() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.closed = true
-	return f.c.Close(f.session)
+	return f.c.WithContext(f.ctx).Close(f.session)
 }
 
 func (f *file) WithContext(ctx context.Context) File {
