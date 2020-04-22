@@ -53,7 +53,7 @@ func main() {
 
 			// new file client
 			mc := mclient.NewClient(mclient.Registry(r), mclient.RequestTimeout(24 * time.Hour))
-			wh := file.NewHttpHandler("go.micro.srv.file", mc, fs)
+			wh := file.NewHttpHandler("go.micro.srv.file", mc, nil)
 			w := web.NewService(web.Address(":18888"), web.Context(ctx))
 			w.Handle("/uploads", wh)
 			w.Handle("/uploads/", wh)
