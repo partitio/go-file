@@ -6,18 +6,18 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/micro/go-micro/client"
 	"github.com/spf13/afero"
 	"golang.org/x/net/context"
 
 	proto "github.com/partitio/go-file/proto"
-
 )
 
 // FileClient is the client interface to access files
 type FileClient interface {
-	Open(filename string) (int64, error)
+	Open(filename string) (File, int64, error)
 
 	Read(sessionId int64, buf []byte) (int, error)
 	ReadAt(sessionId, offset, size int64) ([]byte, error)
@@ -38,6 +38,8 @@ type FileClient interface {
 	Stat(filename string) (*proto.StatResponse, error)
 
 	Close(sessionId int64) error
+	
+	WithContext(ctx context.Context) FileClient
 }
 
 const (
@@ -45,20 +47,34 @@ const (
 )
 
 type fc struct {
-	c proto.FileService
+	c  proto.FileService
 	os afero.Fs
+	ctx context.Context
 }
 
-func (c *fc) Open(filename string) (int64, error) {
-	rsp, err := c.c.Open(context.TODO(), &proto.OpenRequest{Filename: filename})
+func (c *fc) Open(filename string) (File, int64, error) {
+	s, err := c.Stat(filename)
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
-	return rsp.Id, nil
+	rsp, err := c.c.Open(c.ctx, &proto.OpenRequest{Filename: filename})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	f := &file{
+		name:         filename,
+		session:      rsp.Id,
+		offset:       0,
+		size:         s.Size,
+		lastModified: time.Unix(s.LastModified, 0),
+		c:       c,
+	}
+	return f, rsp.Id, nil
 }
 
 func (c *fc) Stat(filename string) (*proto.StatResponse, error) {
-	return c.c.Stat(context.TODO(), &proto.StatRequest{Filename: filename})
+	return c.c.Stat(c.ctx, &proto.StatRequest{Filename: filename})
 }
 
 func (c *fc) GetBlock(sessionId, blockId int64) ([]byte, error) {
@@ -66,7 +82,7 @@ func (c *fc) GetBlock(sessionId, blockId int64) ([]byte, error) {
 }
 
 func (c *fc) ReadAt(sessionId, offset, size int64) ([]byte, error) {
-	rsp, err := c.c.Read(context.TODO(), &proto.ReadRequest{Id: sessionId, Size: size, Offset: offset})
+	rsp, err := c.c.Read(c.ctx, &proto.ReadRequest{Id: sessionId, Size: size, Offset: offset})
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +112,7 @@ func (c *fc) Read(sessionId int64, buf []byte) (int, error) {
 }
 
 func (c *fc) Close(sessionId int64) error {
-	_, err := c.c.Close(context.TODO(), &proto.CloseRequest{Id: sessionId})
+	_, err := c.c.Close(c.ctx, &proto.CloseRequest{Id: sessionId})
 	return err
 }
 
@@ -126,7 +142,7 @@ func (c *fc) DownloadAt(filename, saveFile string, blockId int) error {
 	}
 	defer file.Close()
 
-	sessionId, err := c.Open(filename)
+	_, sessionId, err := c.Open(filename)
 	if err != nil {
 		return err
 	}
@@ -161,7 +177,7 @@ func (c *fc) SetBlock(sessionId, blockId int64, buf []byte) error {
 }
 
 func (c *fc) Create(filename string) (int64, error) {
-	rsp, err := c.c.Create(context.TODO(), &proto.CreateRequest{Filename: filename})
+	rsp, err := c.c.Create(c.ctx, &proto.CreateRequest{Filename: filename})
 	if err != nil {
 		return 0, err
 	}
@@ -222,15 +238,25 @@ func (c *fc) Write(sessionID int64, buf []byte) (int, error) {
 }
 
 func (c *fc) WriteAt(sessionId, offset int64, buf []byte) (int, error) {
-	rsp, err := c.c.Write(context.TODO(), &proto.WriteRequest{Id: sessionId, Offset: offset, Data: buf})
+	rsp, err := c.c.Write(c.ctx, &proto.WriteRequest{Id: sessionId, Offset: offset, Data: buf})
 	if err != nil {
 		return 0, err
 	}
 	return int(rsp.Size), nil
 }
 
-// NewClient returns a new FileClient which uses a micro FileClient
-func NewClient(service string, c client.Client, fs afero.Fs) FileClient {
-	return &fc{proto.NewFileService(service, c), fs}
+func (c *fc) WithContext(ctx context.Context) FileClient {
+	if ctx == nil {
+		ctx = context.TODO()
+	}
+	return &fc{
+		c:   c.c,
+		os:  c.os,
+		ctx: ctx,
+	}
 }
 
+// NewClient returns a new FileClient which uses a micro FileClient
+func NewClient(service string, c client.Client, fs afero.Fs) FileClient {
+	return &fc{proto.NewFileService(service, c), fs, context.TODO()}
+}

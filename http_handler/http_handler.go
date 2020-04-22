@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -35,31 +36,19 @@ func (f *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (f *fileHandler) Download(w http.ResponseWriter, r *http.Request) {
 	n := filepath.Base(r.RequestURI)
-	logrus.Info("download request: ", n)
-	stats, err := f.client.Stat(n)
+	logrus.Trace("download request: ", n)
+	file, _, err := f.client.Open(n)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := f.client.Open(n)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer f.client.Close(id)
-	buf := make([]byte, stats.Size)
-	_, err = f.client.Read(id, buf)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(200)
-	w.Write(buf)
+	defer file.Close()
+	http.ServeContent(w, r, n, time.Now(), file)
 }
 
 func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	logrus.Info("Received upload request")
+	logrus.Trace("Received upload request")
 	// Parse our multipart form, 10 << 20 specifies a maximum
 	// upload of 10 MB files.
 	if err := r.ParseMultipartForm(client.BlockSize); err != nil {
@@ -70,7 +59,7 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	// FormFile returns the first file for the given key `myFile`
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file
-	logrus.Info("Getting file infos")
+	logrus.Trace("Getting file infos")
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		fmt.Println("Error Retrieving the File")
@@ -78,9 +67,9 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	logrus.Infof("Uploading File: %+v\n", handler.Filename)
-	logrus.Infof("File Size: %+v\n", handler.Size)
-	logrus.Infof("MIME Header: %+v\n", handler.Header)
+	logrus.Tracef("Uploading File: %+v\n", handler.Filename)
+	logrus.Tracef("File Size: %+v\n", handler.Size)
+	logrus.Tracef("MIME Header: %+v\n", handler.Header)
 
 	// write this byte array to our temporary file
 	id, err := f.client.Create(handler.Filename)
@@ -96,7 +85,7 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		tp := int(offset * 100 / handler.Size)
 		if percent != tp {
 			percent = tp
-			logrus.Infof("%s (session id: %d) : Upload %d %%", handler.Filename, id, percent)
+			logrus.Tracef("%s (session id: %d) : Upload %d %%", handler.Filename, id, percent)
 		}
 		b := make([]byte, client.BlockSize)
 		n, err := file.ReadAt(b, offset)

@@ -18,7 +18,7 @@ import (
 
 // NewHandler is a handler that can be registered with a micro Server
 func NewHandler(dir string, fs afero.Fs) (proto.FileHandler, error) {
-	logrus.Infof("Creating File handler on directory : %s", dir)
+	logrus.Tracef("Creating File handler on directory : %s", dir)
 	if i, err := fs.Stat(dir); err != nil || !i.IsDir(){
 		return nil, fmt.Errorf("%s is not a valid directory", dir)
 	}
@@ -57,14 +57,14 @@ func (h *handler) Open(ctx context.Context, req *proto.OpenRequest, rsp *proto.O
 	rsp.Id = h.session.Add(file)
 	rsp.Result = true
 
-	logrus.Infof("Open %s, sessionId=%d", req.Filename, rsp.Id)
+	logrus.Tracef("Open %s, sessionId=%d", req.Filename, rsp.Id)
 
 	return nil
 }
 
 func (h *handler) Close(ctx context.Context, req *proto.CloseRequest, rsp *proto.CloseResponse) error {
 	h.session.Delete(req.Id)
-	logrus.Infof("Close sessionId=%d", req.Id)
+	logrus.Tracef("Close sessionId=%d", req.Id)
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (h *handler) Stat(ctx context.Context, req *proto.StatRequest, rsp *proto.S
 	}
 
 	rsp.LastModified = fi.ModTime().Unix()
-	logrus.Infof("Stat %s, %#v", req.Filename, rsp)
+	logrus.Tracef("Stat %s, %#v", req.Filename, rsp.String())
 
 	return nil
 }
@@ -108,7 +108,7 @@ func (h *handler) Read(ctx context.Context, req *proto.ReadRequest, rsp *proto.R
 	rsp.Size = int64(n)
 	rsp.Data = rsp.Data[:n]
 
-	logrus.Debugf("Read sessionId=%d, Offset=%d, n=%d", req.Id, req.Offset, rsp.Size)
+	logrus.Tracef("Read sessionId=%d, Offset=%d, n=%d", req.Id, req.Offset, rsp.Size)
 
 	return nil
 }
@@ -123,7 +123,7 @@ func (h *handler) Create(ctx context.Context, req *proto.CreateRequest, rsp *pro
 	rsp.Id = h.session.Add(file)
 	rsp.Result = true
 
-	logrus.Infof("Open %s, sessionId=%d", req.Filename, rsp.Id)
+	logrus.Tracef("Open %s, sessionId=%d", req.Filename, rsp.Id)
 
 	return nil
 }
@@ -138,7 +138,7 @@ func (h *handler) Write(ctx context.Context, req *proto.WriteRequest, rsp *proto
 	if err != nil && err != io.EOF {
 		return errors.InternalServerError("go.micro.srv.file", err.Error())
 	}
-	logrus.Debugf("Write sessionId=%d, Offset=%d, n=%d", req.Id, req.Offset, n)
+	logrus.Tracef("Write sessionId=%d, Offset=%d, n=%d", req.Id, req.Offset, n)
 	rsp.Size = int64(n)
 	return nil
 }

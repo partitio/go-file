@@ -8,6 +8,7 @@ import (
 	mclient "github.com/micro/go-micro/client"
 	"github.com/micro/go-micro/registry/memory"
 	"github.com/micro/go-micro/web"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -22,6 +23,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	logrus.SetLevel(logrus.TraceLevel)
 	cmd := cobra.Command{
 		Use: "file-srv [path]",
 		Args: cobra.ExactArgs(1),
@@ -46,7 +48,11 @@ func main() {
 			}
 
 			// start service
-			go s.Run()
+			go func() {
+				if err := s.Run(); err != nil {
+					logrus.Fatal(err)
+				}
+			}()
 
 			// wait for start
 			<-wait
