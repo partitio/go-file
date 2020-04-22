@@ -61,7 +61,7 @@ func TestFileServer(t *testing.T) {
 	<-wait
 
 	// new file client
-	cl := client.NewClient("go.micro.srv.file", s.Client(), fs)
+	cl := client.NewClient("go.micro.srv.file", s.Client(), &fs)
 
 	if err := cl.Upload(f, "server_test.file"); err != nil {
 		t.Error(err)
