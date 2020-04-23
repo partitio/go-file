@@ -38,7 +38,7 @@ type FileClient interface {
 	Stat(filename string) (*proto.StatResponse, error)
 
 	Close(sessionId int64) error
-	
+
 	WithContext(ctx context.Context) FileClient
 }
 
@@ -47,8 +47,8 @@ const (
 )
 
 type fc struct {
-	c  proto.FileService
-	os afero.Fs
+	c   proto.FileService
+	os  afero.Fs
 	ctx context.Context
 }
 
@@ -68,7 +68,7 @@ func (c *fc) Open(filename string) (File, int64, error) {
 		offset:       0,
 		size:         s.Size,
 		lastModified: time.Unix(s.LastModified, 0),
-		c:       c,
+		c:            c,
 	}
 	return f, rsp.Id, nil
 }
@@ -136,7 +136,7 @@ func (c *fc) DownloadAt(filename, saveFile string, blockId int) error {
 	if c.os == nil {
 		return errors.New("UploadAt cannot use a nil fs")
 	}
-	fs := *c.os
+	fs := c.os
 	log.Printf("Download %s in %d blocks\n", filename, blocks-blockId)
 
 	file, err := fs.OpenFile(saveFile, os.O_CREATE|os.O_WRONLY, 0666)
@@ -195,7 +195,7 @@ func (c *fc) UploadAt(filename, saveFile string, blockId int) error {
 	if c.os == nil {
 		return errors.New("UploadAt cannot use a nil fs")
 	}
-	fs := *c.os
+	fs := c.os
 	stat, err := fs.Stat(filename)
 	if err != nil {
 		return err

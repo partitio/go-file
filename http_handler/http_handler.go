@@ -1,6 +1,7 @@
 package http_handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ type Handler interface {
 
 type fileHandler struct {
 	client client.FileClient
+	opts   *Options
 }
 
 func (f *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +39,8 @@ func (f *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *fileHandler) Download(w http.ResponseWriter, r *http.Request) {
 	n := filepath.Base(r.RequestURI)
 	logrus.Trace("download request: ", n)
-	file, _, err := f.client.Open(n)
+	ctx := f.opts.headersMatcher(r.Header)
+	file, _, err := f.client.WithContext(ctx).Open(n)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -71,13 +74,14 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	logrus.Tracef("File Size: %+v\n", handler.Size)
 	logrus.Tracef("MIME Header: %+v\n", handler.Header)
 
-	// write this byte array to our temporary file
-	id, err := f.client.Create(handler.Filename)
+	ctx := f.opts.headersMatcher(r.Header)
+
+	id, err := f.client.WithContext(ctx).Create(handler.Filename)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer f.client.Close(id)
+	defer f.client.WithContext(ctx).Close(id)
 
 	offset := int64(0)
 	percent := 0
@@ -93,7 +97,7 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		offset += int64(n)
-		if _, err := f.client.WriteAt(id, offset, b); err != nil {
+		if _, err := f.client.WithContext(ctx).WriteAt(id, offset, b); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -103,6 +107,15 @@ func (f *fileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 }
 
-func NewFileHandler(client client.FileClient) http.Handler {
-	return &fileHandler{client}
+func NewFileHandler(client client.FileClient, options ...Option) http.Handler {
+	o := &Options{}
+	for _, v := range options {
+		v(o)
+	}
+	if o.headersMatcher == nil {
+		o.headersMatcher = func(h http.Header) context.Context {
+			return context.Background()
+		}
+	}
+	return &fileHandler{client, o}
 }

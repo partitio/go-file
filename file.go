@@ -16,10 +16,10 @@ func RegisterFileHandler(server server.Server, dir string, fs afero.Fs) error {
 	return handler.RegisterHandler(server, dir, fs)
 }
 
-func NewClient(service string, c mclient.Client, fs *afero.Fs) client.FileClient {
+func NewClient(service string, c mclient.Client, fs afero.Fs) client.FileClient {
 	return client.NewClient(service, c, fs)
 }
 
-func NewHttpHandler(service string, c mclient.Client, fs *afero.Fs) http.Handler {
+func NewHttpHandler(service string, c mclient.Client, fs afero.Fs) http.Handler {
 	return http_handler.NewFileHandler(client.NewClient(service, c, fs))
 }
