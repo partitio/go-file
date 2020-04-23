@@ -20,6 +20,6 @@ func NewClient(service string, c mclient.Client, fs afero.Fs) client.FileClient 
 	return client.NewClient(service, c, fs)
 }
 
-func NewHttpHandler(service string, c mclient.Client, fs afero.Fs) http.Handler {
-	return http_handler.NewFileHandler(client.NewClient(service, c, fs))
+func NewHttpHandler(service string, c mclient.Client, fs afero.Fs, options ...http_handler.Option) http.Handler {
+	return http_handler.NewFileHandler(client.NewClient(service, c, fs), options...)
 }
